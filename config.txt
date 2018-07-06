@@ -1,0 +1,2 @@
+images_directory: /home/mabuelanin/Desktop/images
+images_per_page: 10

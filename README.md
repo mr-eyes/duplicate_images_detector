@@ -1,10 +1,9 @@
-# Duplicate Images Detector
+# Duplicate Images Detector using perceptual hash technique
 
 ## Features
 - Fast detection of duplicate images "Tested on 200K Images"
 - Build a database of distinct images.
 - View the distinct images in a flask web app
-
 
 
 ## Run:
@@ -18,7 +17,11 @@ python main.py web
 ```
 ### Lauching the web app
 ```bash
-python web_app/run.py
+python web_app/app.py
+```
+### Change the view from grid to tablular
+```bash
+python web_app/app.py table
 ```
 
 ## Demo

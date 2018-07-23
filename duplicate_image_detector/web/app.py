@@ -3,6 +3,7 @@ import sys
 from flask import Flask, render_template, send_from_directory, redirect
 from flask_sqlalchemy import SQLAlchemy
 
+from models import Images
 
 view = "gallery"
 
@@ -29,12 +30,6 @@ db_url = 'sqlite:///' + os.path.join(project_abs_path, "..") + '/images_info.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
 db = SQLAlchemy(app)
-
-
-class Images(db.Model):
-    ID = db.Column('ID', db.Integer, primary_key=True, autoincrement=True)
-    count = db.Column('count', db.Integer)
-    name = db.Column('name', db.TEXT)
 
 
 @app.route('/page/<int:page_num>')

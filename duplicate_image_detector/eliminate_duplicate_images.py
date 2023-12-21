@@ -1,35 +1,29 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import os
-import sqlite3
-import subprocess
 import sys
 import tqdm
 import imagehash
 import magic
+import configparser
+
 from PIL import Image, ExifTags
 from termcolor import cprint
+from db_handler import ImagesDB
 
-x = open('config.txt', 'r')
-r = x.read()
-x.close()
-
-subprocess.call("rm -f images_info.db", shell=True)
-
-img_dir = r.split('\n')[0].split(':')[1].strip()
-
-
+######################################## CONSTANTS ######################################
+IMG_INFO_DB_FILENAME = "images_info.db"
+# List mime types fully supported by Pillow
+FULL_SUPPORTED_FORMATS = ['gif', 'jp2', 'jpeg', 'pcx', 'png', 'tiff', 'x-ms-bmp',
+                            'x-portable-pixmap', 'x-xbitmap']
 ######################################## HASHING ######################################
 
 
 def get_image_files(path):
     def is_image(file_name):
-        # List mime types fully supported by Pillow
-        full_supported_formats = ['gif', 'jp2', 'jpeg', 'pcx', 'png', 'tiff', 'x-ms-bmp',
-                                  'x-portable-pixmap', 'x-xbitmap']
         try:
             mime = magic.from_file(file_name, mime=True)
-            return mime.rsplit('/', 1)[1] in full_supported_formats
+            return mime.rsplit('/', 1)[1] in FULL_SUPPORTED_FORMATS
         except IndexError:
             return False
 
@@ -99,46 +93,47 @@ def hash_file(file):
 
 ######################################## END HASHING ######################################
 
-# [ID,Filename,count]
+def read_config():
+    """read from configuration file
+    """
+    config = configparser.ConfigParser()
+    if not os.path.exists("config.cfg"):
+        raise FileNotFoundError("configuration file (config.cfg) not found!")
+    config.read("config.cfg")
+    return config
 
-results_dict = {}
+def process():
+    """execute the routine of eliminating duplicate images
+    """
+    config = read_config()
+    
 
-conn = sqlite3.connect('images_info.db')
+    img_dir = config['DEFAULT']['images_directory']
+    results_dict = {}
+    images = list(get_image_files(img_dir))
+    for image in tqdm.tqdm(images):
+        info = hash_file(image)
+        if info == 0:
+            continue
 
-c = conn.cursor()
+        hash_value = info['hash']
 
-# Create table
-c.execute('''CREATE TABLE IF NOT EXISTS IMAGES(
-   ID INTEGER PRIMARY KEY AUTOINCREMENT,
-   count           INT      NOT NULL,
-   name            TEXT       NOT NULL
-)''')
+        if hash_value not in results_dict:
+            file_name = os.path.basename(info['_id'])
+            results_dict[hash_value] = [file_name, 1]
+        else:
+            results_dict[hash_value][1] += 1
 
-images = list(get_image_files(img_dir))
+    count = list(results_dict.values())
+    sorted_count = sorted(count, key=lambda x: x[1], reverse=True)
+    
+    with ImagesDB(IMG_INFO_DB_FILENAME) as imgDb:        
+        imgDb.insert_batch(sorted_count)
 
-for i in tqdm.tqdm(range(len(images))):
-    image = images[i]
-    info = hash_file(image)
-    if info == 0:
-        continue
-
-    hash_value = info['hash']
-
-    if hash_value not in results_dict:
-        file_name = os.path.basename(info['_id'])
-        results_dict[hash_value] = [file_name, 1]
-    else:
-        results_dict[hash_value][1] += 1
-
-count = list(results_dict.values())
-sorted_count = sorted(count, key=lambda x: x[1], reverse=True)
-
-for record in sorted_count:
-    c.execute("INSERT INTO IMAGES VALUES (NULL, ?, ?)", (record[1], record[0]))
-
-conn.commit()
-conn.close()
-
-if len(sys.argv) > 1:
-    if sys.argv[1] == "web":
-        subprocess.call("python3 web_app/app.py", shell=True)
+if __name__ == "__main__":
+    process()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "web":
+            from web.app import app
+            app.run(1111)
+    

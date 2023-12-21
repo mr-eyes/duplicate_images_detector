@@ -1,0 +1,29 @@
+what changed in this PR:
+
+* changed file structure to match file structure as a package for pip
+* refactored configuration reading from a file to a cleaner more generalizable form
+* moved all constants defined once up the file and transformed to pythonic constants 
+* moved db interaction to a seperate module (change db interaction if required in the future
+  ex: use an orm instead of pyodb)
+* refactored main module to prepare it to be used as a library inside others python code
+* got rid of all subprocess calls (unnessecary overhead on the program)
+* structred the webapp to be a seperate module
+* modularized the web app implementation
+
+
+
+
+
+
+
+
+
+
+
+
+
+deps:
+tqdm
+imagehash
+python-magic
+termcolor
